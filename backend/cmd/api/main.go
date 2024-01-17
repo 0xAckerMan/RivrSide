@@ -1,12 +1,15 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"time"
 )
+
+var Version = "1.0.0"
 
 type Config struct {
 	env  string
@@ -25,33 +28,23 @@ func main() {
 	flag.IntVar(&cfg.port, "port", 3000, "The running port")
 	flag.Parse()
 
-  logger := log.New(os.Stdout, "", log.Ldate|log.Ltime)
+	logger := log.New(os.Stdout, "", log.Ldate|log.Ltime)
 
 	app := &Application{
 		Config: cfg,
-    logger: logger,
+		logger: logger,
 	}
 
-  logger.Printf("%s server running on port %d", app.env,app.port)
+    addr := fmt.Sprintf(":%d", cfg.port)
 
-  http.HandleFunc("/healthcheck",app.healthcheck)
-	http.ListenAndServe(":3000", nil)
-}
+	logger.Printf("%s server running on port %d", app.env, app.port)
 
-func (app *Application) healthcheck(w http.ResponseWriter, r *http.Request){
-  status := map[string]interface{}{
-    "status": "active",
-    "env": app.env,
-    "version": "1.0.0",
-  }
-
-  js, err := json.Marshal(status)
-  if err != nil{
-    app.logger.Println("cant unmarshal the data")
-    http.Error(w,"Internal server error", http.StatusInternalServerError)
-    return
-  }
-
-  w.Header().Set("Content-Type", "application/json")
-  w.Write(js)
+    srv := http.Server{
+        Addr: addr,
+        Handler: app.routes(),
+        IdleTimeout: time.Minute,
+        ReadTimeout: 30 * time.Second,
+        WriteTimeout: 30 * time.Second,
+    }
+    srv.ListenAndServe()
 }

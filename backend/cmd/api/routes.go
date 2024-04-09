@@ -19,7 +19,11 @@ func (app *Application) routes() *chi.Mux {
 	})
 
     routes.Group(func(r chi.Router) {
-        r.Get("/roles", app.HandleGetAllRole)
+        r.Get("/rooms", app.HandleGetAllRooms)
+        r.Get("/room/{id}", app.HandleGetSingleRoom)
+        r.Post("/room", app.HandleCreateRoom)
+        r.Patch("/room/{id}", app.HandlePartialUpdateRoom)
+        r.Delete("/room/{id}", app.HandleDeleteRoom)
     })
 
 	admin := chi.NewRouter()

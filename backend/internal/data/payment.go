@@ -1,10 +1,10 @@
 package data
 
-import "gorm.io/gorm"
-
 type Payment struct {
-	gorm.Model
-	User    *User    `json:"user"`
+    CommonFields
+    UserID int64 `json:"-"`
+	User    *User    `json:"user" gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE"`
 	Amount  int      `json:"Amount"`
-	Package *Package `json:"package"`
+    PackageID int `json:"-"`
+	PackagePlan *PackagePlan `json:"package_plan"  gorm:"foreignKey:PackageID;constraint:OnDelete:CASCADE"`
 }

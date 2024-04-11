@@ -18,3 +18,7 @@ func (app *Application) HandleUpdateUser (w http.ResponseWriter, r *http.Request
     return
 }
 
+func (app *Application) HandleGetAllUserWithRole(w http.ResponseWriter, r *http.Request) {
+	return
+}
+

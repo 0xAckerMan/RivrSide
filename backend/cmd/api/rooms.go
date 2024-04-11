@@ -177,3 +177,4 @@ func (app *Application) HandleDeleteRoom(w http.ResponseWriter, r *http.Request)
 		return
 	}
 }
+

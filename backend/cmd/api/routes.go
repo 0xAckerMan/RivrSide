@@ -30,6 +30,22 @@ func (app *Application) routes() *chi.Mux {
 	routes.Mount("/admin", admin)
 	admin.Group(func(r chi.Router) {
 		r.Get("/healthcheck", app.healthcheck)
+        r.Route("/role", func(r chi.Router) {
+            r.Post("/", app.HandleCreateRole)
+            r.Get("/", app.HandleGetAllRole)
+            r.Patch("/{id}", app.HandleUpdateRole)
+            r.Delete("/{id}", app.HandleDeleteRole)
+        })
 	})
+
+    manager := chi.NewRouter()
+    routes.Mount("/manager", manager)
+    manager.Group(func(r chi.Router) {
+        r.Get("/healthcheck", app.healthcheck)
+        r.Route("/tenant", func(r chi.Router) {
+            r.Post("/",app.HandleCreateNewTenant)
+            r.Get("/", app.HandleGetAllTenants)
+        })
+    })
 	return r
 }

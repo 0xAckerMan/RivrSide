@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 
+	"github.com/0xAckerMan/internal/data"
 )
 
 func (app *Application) HandleCreateNewTenant(w http.ResponseWriter, r *http.Request) {
@@ -18,8 +19,6 @@ func (app *Application) HandleCreateNewTenant(w http.ResponseWriter, r *http.Req
 		PackageID     int64        `json:"package"`
 		Paymentstatus string       `json:"payment_status"`
 		AmountPaid    int          `json:"amount_paid"`
-		Balance       int          `json:"balance"`
-		IsActive      bool         `json:"is_active"`
 	}
     
     err := app.readJSON(w,r,&input)
@@ -28,7 +27,19 @@ func (app *Application) HandleCreateNewTenant(w http.ResponseWriter, r *http.Req
         return
     }
 
-
+    tenant := data.User{
+        First_name: input.First_name,
+        Last_name: input.Last_name,
+        Email: input.Email,
+        PhoneNumber: input.PhoneNumber,
+        Gender: input.Gender,
+        RoleID: input.RoleID,
+        RoomID: input.RoomID,
+        PackageID: input.PackageID,
+        Paymentstatus: input.Paymentstatus,
+        AmountPaid: input.AmountPaid,
+        IsActive: true,
+    }
 
 }
 

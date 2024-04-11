@@ -42,3 +42,8 @@ func (app *Application) duplicateRecordResponse(w http.ResponseWriter, r *http.R
     app.errorResponse(w,r,http.StatusOK,message)
 }
 
+
+func (app *Application) packageNotFoundResponse(w http.ResponseWriter, r *http.Request){
+    message := "Package not found"
+    app.errorResponse(w,r,http.StatusNotFound,message)
+}

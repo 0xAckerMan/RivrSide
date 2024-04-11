@@ -1,9 +1,12 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 )
+
+var ErrRecordNotFound = errors.New("record searched could not be found")
 
 func (app *Application) errorResponse(w http.ResponseWriter, r *http.Request, status int, message interface{}){
     app.writeJSON(w,status,envelope{"response": message},nil)
@@ -28,3 +31,14 @@ func (app *Application) serverErrorResponse(w http.ResponseWriter, r *http.Reque
     message := "Sorry, the server is experiencing an error at the moment"
     app.errorResponse(w,r,http.StatusInternalServerError,message)
 }
+
+func (app *Application) noRecordFoundResponse(w http.ResponseWriter, r *http.Request){
+    message := "no record found"
+    app.errorResponse(w,r,http.StatusNotFound,message)
+}
+
+func (app *Application) duplicateRecordResponse(w http.ResponseWriter, r *http.Request){
+    message:= "duplicate input data, record already exists"
+    app.errorResponse(w,r,http.StatusOK,message)
+}
+

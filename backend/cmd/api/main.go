@@ -23,7 +23,7 @@ type Config struct {
 }
 
 type Application struct {
-	Config
+	Config Config
 	logger *log.Logger
     DB *gorm.DB
 }
@@ -63,7 +63,7 @@ func main() {
 
     addr := fmt.Sprintf(":%d", cfg.port)
 
-	logger.Printf("%s server running on port %d", app.env, app.port)
+	logger.Printf("%s server running on port %d", app.Config.env, app.Config.port)
 
     srv := http.Server{
         Addr: addr,

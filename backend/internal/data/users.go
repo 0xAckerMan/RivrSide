@@ -2,28 +2,29 @@ package data
 
 import (
 	"time"
-
-	"gorm.io/gorm"
 )
 
 type User struct {
-	gorm.Model
-	First_name    string     `json:"first_name"`
-	Last_name     string     `json:"last_name"`
-	Email         string     `json:"email"`
-	PhoneNumber   string     `json:"phone_number"`
-	Password      string     `json:"-"`
-	Gender        string     `json:"gender"`
-	Role          *Role      `json:"role"`
-	Room          *Room      `json:"room"`
-	Organisation  string     `json:"organisation"`
-	Position      string     `json:"position"`
-	Package       *Package   `json:"package"`
-	Month         time.Month `json:"current_month"`
-	Paymentstatus string     `json:"payment_status"`
-	Amount        int        `json:"amount"`
-	Balance       int        `json:"balance"`
-	Isadmin       bool       `json:"-"`
-	Ismanager     bool       `json:"-"`
-	IsActive      bool       `json:"is_active"`
+	CommonFields
+	First_name    string       `json:"first_name" gorm:"not null"`
+	Last_name     string       `json:"last_name" gorm:"not null"`
+	Email         string       `json:"email" gorm:"uniqueIndex;not null"`
+	PhoneNumber   string       `json:"phone_number" gorm:"uniqueIndex;not null"`
+	Password      string       `json:"-" gorm:"not null"`
+	Gender        string       `json:"gender"`
+	RoleID        int64        `json:"-"`
+	Role          *Role        `json:"role" gorm:"foreignKey:RoleID;constraint:OnDelete:CASCADE"`
+	RoomID        int64        `json:"-"`
+	Room          *Room        `json:"room" gorm:"foreignKey:RoomID;constraint:OnDelete:CASCADE"`
+	Organisation  string       `json:"organisation"`
+	Position      string       `json:"position"`
+	PackageID     int64        `json:"-"`
+	PackagePlan   *PackagePlan `gorm:"foreignKey:PackageID;constraint:OnDelete:CASCADE"`
+	Month         time.Month   `json:"current_month"`
+	Paymentstatus string       `json:"payment_status"`
+	AmountPaid    int          `json:"amount_paid"`
+	Balance       int          `json:"balance" gorm:"default:0"`
+	Isadmin       bool         `json:"-" gorm:"default:false"`
+	Ismanager     bool         `json:"-" gorm:"default:false"`
+	IsActive      bool         `json:"is_active"`
 }

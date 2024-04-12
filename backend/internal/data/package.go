@@ -6,9 +6,3 @@ type PackagePlan struct{
     Price int `json:"price"`
 }
 
-func NewPackage() *PackagePlan{
-    return &PackagePlan{
-        Name: "Room only",
-        Price: 4700,
-    }
-}

@@ -10,19 +10,7 @@ import (
 )
 
 func (app *Application) HandleCreateNewTenant(w http.ResponseWriter, r *http.Request) {
-	var input struct {
-		First_name    string `json:"first_name"`
-		Last_name     string `json:"last_name"`
-		Email         string `json:"email"`
-		PhoneNumber   string `json:"phone_number"`
-		Password      string `json:"password"`
-		Gender        string `json:"gender"`
-		RoleID        int64  `json:"role"`
-		RoomID        int64  `json:"room"`
-		PackageID     int64  `json:"package"`
-		Paymentstatus string `json:"payment_status"`
-		AmountPaid    int    `json:"amount_paid"`
-	}
+	var input data.CreateTenant
 
 	err := app.readJSON(w, r, &input)
 	if err != nil {
@@ -31,15 +19,12 @@ func (app *Application) HandleCreateNewTenant(w http.ResponseWriter, r *http.Req
 	}
 
 	tenant := data.User{
-		First_name:    input.First_name,
-		Last_name:     input.Last_name,
-		Email:         input.Email,
-		PhoneNumber:   input.PhoneNumber,
-		RoomID:        input.RoomID,
-		PackageID:     input.PackageID,
-		Paymentstatus: input.Paymentstatus,
-		AmountPaid:    input.AmountPaid,
-		IsActive:      true,
+		First_name:  input.First_name,
+		Last_name:   input.Last_name,
+		Email:       input.Email,
+		PhoneNumber: input.PhoneNumber,
+		RoomID:      input.RoomID,
+		IsActive:    true,
 	}
 
 	var role data.Role
@@ -57,22 +42,9 @@ func (app *Application) HandleCreateNewTenant(w http.ResponseWriter, r *http.Req
 
 	tenant.RoleID = int64(role.ID)
 
-	var packageplan data.PackagePlan
-
-	result := app.DB.First(&packageplan, tenant.PackageID)
-	if result.RowsAffected == 0 {
-		app.packageNotFoundResponse(w, r)
-		return
-	}
-
-	if result.Error != nil {
-		app.serverErrorResponse(w, r, result.Error)
-		return
-	}
-
 	var room data.Room
 
-	result = app.DB.First(&room, tenant.RoomID)
+	result := app.DB.First(&room, tenant.RoomID)
 
 	if result.RowsAffected == 0 {
 		message := "Invalid room entry, doesnt exist"
@@ -93,8 +65,6 @@ func (app *Application) HandleCreateNewTenant(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	tenant.Balance = packageplan.Price - tenant.AmountPaid
-
 	hash, err := bcrypt.GenerateFromPassword([]byte(input.Password), 12)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
@@ -103,13 +73,35 @@ func (app *Application) HandleCreateNewTenant(w http.ResponseWriter, r *http.Req
 
 	tenant.Password = string(hash)
 
-	res := app.DB.Preload("roles").Preload("package_plans").Preload("rooms").Create(&tenant)
+	var occupants []data.User
+
+	capacity := app.DB.Where("room_id = ?", room.ID).Find(&occupants)
+	if capacity.Error != nil {
+		app.serverErrorResponse(w, r, capacity.Error)
+		return
+	}
+
+	if capacity.RowsAffected >= int64(room.Capacity) {
+		err := app.writeJSON(w, http.StatusForbidden, envelope{"response": envelope{"error": "Ooops! Sorry the room capacity is full at the moment"}}, nil)
+		if err != nil {
+			app.serverErrorResponse(w, r, err)
+			return
+		}
+		return
+	}
+
+	res := app.DB.Create(&tenant)
 	if res.Error != nil {
 		if strings.Contains(res.Error.Error(), "duplicate key value violates unique constraint") {
 			app.duplicateRecordResponse(w, r)
 			return
 		}
 		app.serverErrorResponse(w, r, res.Error)
+		return
+	}
+
+	if err := app.DB.Model(&tenant).Preload("Role").Preload("Room").First(&tenant).Error; err != nil {
+		app.serverErrorResponse(w, r, err)
 		return
 	}
 
@@ -121,7 +113,7 @@ func (app *Application) HandleCreateNewTenant(w http.ResponseWriter, r *http.Req
 }
 
 func (app *Application) HandleGetAllTenants(w http.ResponseWriter, r *http.Request) {
-    var tenant []data.User
+	var tenant []data.User
 
 	var role data.Role
 
@@ -137,39 +129,173 @@ func (app *Application) HandleGetAllTenants(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	result := app.DB.Where("role_id", role.ID).Preload("Role").Preload("PackagePlan").Preload("Room").Find(&tenant)
-    if result.Error!=nil{
-        app.serverErrorResponse(w,r,result.Error)
-        return
-    }
+	result := app.DB.Where("role_id", role.ID).Preload("Role").Preload("Room").Find(&tenant)
+	if result.Error != nil {
+		app.serverErrorResponse(w, r, result.Error)
+		return
+	}
 
-    if result.RowsAffected == 0{
-        app.noRecordFoundResponse(w,r)
-        return
-    }
+	if result.RowsAffected == 0 {
+		app.noRecordFoundResponse(w, r)
+		return
+	}
 
-    err := app.writeJSON(w,http.StatusOK,envelope{"tenants": tenant}, nil)
-    if err != nil{
-        app.serverErrorResponse(w,r,err)
-        return
-    }
+	err := app.writeJSON(w, http.StatusOK, envelope{"tenants": tenant}, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
 }
 
 func (app *Application) HandleGetTenantInfo(w http.ResponseWriter, r *http.Request) {
-	return
+	id, err := app.readIDparam(w, r)
+	if err != nil {
+		app.notFoundResponse(w, r)
+		return
+	}
+
+	var tenant data.User
+
+	result := app.DB.Preload("Role").Preload("Room").First(&tenant, id)
+	if result.RowsAffected == 0 {
+		app.noRecordFoundResponse(w, r)
+		return
+	}
+
+	if result.Error != nil {
+		app.serverErrorResponse(w, r, result.Error)
+		return
+	}
+
+	tenantInfo := data.TenantInfo{
+        User: tenant,  
+	}
+
+	err = app.writeJSON(w, http.StatusOK, envelope{"tenant": tenantInfo}, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
 }
 
-func (app *Application) HandleGetAllVaccantRooms(w http.ResponseWriter, r *http.Request) {
-	return
+func (app *Application) HandleGetAllActiveTenants(w http.ResponseWriter, r *http.Request) {
+	var tenant []data.User
+
+	var role data.Role
+
+	roleResult := app.DB.Where(data.Role{Role: "tenant"}).First(&role)
+	if roleResult.RowsAffected == 0 {
+		message := "Create a role named tenant first please"
+		app.errorResponse(w, r, http.StatusInternalServerError, envelope{"error": message})
+		return
+	}
+
+	if roleResult.Error != nil {
+		app.serverErrorResponse(w, r, roleResult.Error)
+		return
+	}
+
+	result := app.DB.Where("role_id = ? AND is_active = ?", role.ID, "true").Preload("Role").Preload("Room").Find(&tenant)
+	if result.Error != nil {
+		app.serverErrorResponse(w, r, result.Error)
+		return
+	}
+
+	if result.RowsAffected == 0 {
+		app.noRecordFoundResponse(w, r)
+		return
+	}
+
+	err := app.writeJSON(w, http.StatusOK, envelope{"tenants": tenant}, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
 }
 
-func (app *Application) HandleGetMaleVaccantRooms(w http.ResponseWriter, r *http.Request) {
-	return
+func (app *Application) HandleGetAllVacantRooms(w http.ResponseWriter, r *http.Request) {
+    type VacantRoomInfo struct {
+        data.Room
+        Vacancies int `json:"vacancies"`
+    }
+
+    // Query rooms and calculate vacancies per room
+    var vacantRoomInfos []VacantRoomInfo
+    result := app.DB.
+        Table("rooms").
+        Select("rooms.*, (rooms.capacity - COUNT(users.id)) AS vacancies").
+        Joins("LEFT JOIN users ON rooms.id = users.room_id").
+        Group("rooms.id").
+        Having("(rooms.capacity - COUNT(users.id)) > 0"). // Filter out rooms with no vacancies
+        Find(&vacantRoomInfos)
+    if result.Error != nil {
+        app.serverErrorResponse(w, r, result.Error)
+        return
+    }
+
+    err := app.writeJSON(w, http.StatusOK, envelope{"vacant_rooms": vacantRoomInfos}, nil)
+    if err != nil {
+        app.serverErrorResponse(w, r, err)
+        return
+    }
 }
 
-func (app *Application) HandleGetFemaleVaccantRooms(w http.ResponseWriter, r *http.Request) {
-	return
+func (app *Application) HandleGetMaleVacantRooms(w http.ResponseWriter, r *http.Request) {
+    type VacantRoomInfo struct {
+        data.Room
+        Vacancies int `json:"vacancies"`
+    }
+
+    // Query rooms and calculate vacancies per room for male occupants
+    var vacantRoomInfos []VacantRoomInfo
+    result := app.DB.
+        Table("rooms").
+        Select("rooms.*, (rooms.capacity - COUNT(users.id)) AS vacancies").
+        Joins("LEFT JOIN users ON rooms.id = users.room_id").
+        Where("users.gender = ?", "male"). // Filter by male occupants
+        Group("rooms.id").
+        Having("(rooms.capacity - COUNT(users.id)) > 0"). // Filter out rooms with no vacancies
+        Find(&vacantRoomInfos)
+    if result.Error != nil {
+        app.serverErrorResponse(w, r, result.Error)
+        return
+    }
+
+    err := app.writeJSON(w, http.StatusOK, envelope{"male_vacant_rooms": vacantRoomInfos}, nil)
+    if err != nil {
+        app.serverErrorResponse(w, r, err)
+        return
+    }
 }
+
+func (app *Application) HandleGetFemaleVacantRooms(w http.ResponseWriter, r *http.Request) {
+    type VacantRoomInfo struct {
+        data.Room
+        Vacancies int `json:"vacancies"`
+    }
+
+    // Query rooms and calculate vacancies per room for male occupants
+    var vacantRoomInfos []VacantRoomInfo
+    result := app.DB.
+        Table("rooms").
+        Select("rooms.*, (rooms.capacity - COUNT(users.id)) AS vacancies").
+        Joins("LEFT JOIN users ON rooms.id = users.room_id").
+        Where("users.gender = ?", "female"). // Filter by female occupants
+        Group("rooms.id").
+        Having("(rooms.capacity - COUNT(users.id)) > 0"). // Filter out rooms with no vacancies
+        Find(&vacantRoomInfos)
+    if result.Error != nil {
+        app.serverErrorResponse(w, r, result.Error)
+        return
+    }
+
+    err := app.writeJSON(w, http.StatusOK, envelope{"female_vacant_rooms": vacantRoomInfos}, nil)
+    if err != nil {
+        app.serverErrorResponse(w, r, err)
+        return
+    }
+}
+
 
 func (app *Application) HandleConfirmTenantPayment(w http.ResponseWriter, r *http.Request) {
 	return

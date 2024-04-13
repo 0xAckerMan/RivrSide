@@ -35,7 +35,7 @@ func init(){
 func main() {
 	var cfg Config
 
-	flag.StringVar(&cfg.env, "env", "env", "The environment of the api")
+	flag.StringVar(&cfg.env, "env", "dev", "The environment of the api")
 	flag.IntVar(&cfg.port, "port", 3000, "The running port")
     flag.StringVar(&cfg.db.dsn, "dsn", os.Getenv("DATABASE_DSN"), "The db connection dsn")
 	flag.Parse()

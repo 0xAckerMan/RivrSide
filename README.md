@@ -26,7 +26,7 @@ un the backend server.
 - If you are interested in frontend development, check out the frontend directory.
 - Follow the instructions in the frontend README to set up the frontend environment and start contributing.
 
-3. Explore and Contribute:
+4. Explore and Contribute:
 - Explore the codebase, and feel free to contribute improvements, bug fixes, or new features.
 - Submit pull requests to share your contributions with the community.
 

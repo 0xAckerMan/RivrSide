@@ -17,19 +17,19 @@ var Version = "1.0.0"
 type Config struct {
 	env  string
 	port int
-    db struct{
-        dsn string
-    }
+	db   struct {
+		dsn string
+	}
 }
 
 type Application struct {
 	Config Config
 	logger *log.Logger
-    DB *gorm.DB
+	DB     *gorm.DB
 }
 
-func init(){
-    LoadEnv()
+func init() {
+	LoadEnv()
 }
 
 func main() {
@@ -37,7 +37,7 @@ func main() {
 
 	flag.StringVar(&cfg.env, "env", "dev", "The environment of the api")
 	flag.IntVar(&cfg.port, "port", 3000, "The running port")
-    flag.StringVar(&cfg.db.dsn, "dsn", os.Getenv("DATABASE_DSN"), "The db connection dsn")
+	flag.StringVar(&cfg.db.dsn, "dsn", os.Getenv("DATABASE_DSN"), "The db connection dsn")
 	flag.Parse()
 
 	logger := log.New(os.Stdout, "", log.Ldate|log.Ltime)
@@ -52,25 +52,25 @@ func main() {
 		logger.Fatal(err)
 	}
 	defer DB.Close()
-    logger.Printf("database connection pool established")
+	logger.Printf("database connection pool established")
 
 	app := &Application{
-        DB: db,
+		DB:     db,
 		Config: cfg,
 		logger: logger,
 	}
-    app.migrations()
+	app.migrations()
 
-    addr := fmt.Sprintf(":%d", cfg.port)
+	addr := fmt.Sprintf(":%d", cfg.port)
 
 	logger.Printf("%s server running on port %d", app.Config.env, app.Config.port)
 
-    srv := http.Server{
-        Addr: addr,
-        Handler: app.routes(),
-        IdleTimeout: time.Minute,
-        ReadTimeout: 30 * time.Second,
-        WriteTimeout: 30 * time.Second,
-    }
-    srv.ListenAndServe()
+	srv := http.Server{
+		Addr:         addr,
+		Handler:      app.routes(),
+		IdleTimeout:  time.Minute,
+		ReadTimeout:  30 * time.Second,
+		WriteTimeout: 30 * time.Second,
+	}
+	srv.ListenAndServe()
 }

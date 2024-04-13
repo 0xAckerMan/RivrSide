@@ -1,20 +1,34 @@
 package main
 
-import "github.com/go-chi/chi/v5"
+import (
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
+)
 
 func (app *Application) routes() *chi.Mux {
 	r := chi.NewRouter()
+	r.Use(middleware.Logger)
+	r.Use(middleware.CleanPath)
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   []string{"https://*", "http://*"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+		ExposedHeaders:   []string{"Link"},
+		AllowCredentials: false,
+		MaxAge:           300,
+	}))
 	r.NotFound(app.notFoundResponse)
 	r.MethodNotAllowed(app.methodNotAllowedResponse)
 
-    r.Get("/", app.ApiHome)
+	r.Get("/", app.ApiHome)
 	routes := chi.NewRouter()
 	r.Mount("/api/v1", routes)
 	routes.Get("/healthcheck", app.healthcheck)
-    routes.Post("/login", app.UserLogin)
-    routes.Post("/signout", app.SignOut)
+	routes.Post("/login", app.UserLogin)
+	routes.Post("/signout", app.SignOut)
 
-    routes.Patch("/user/{id}", app.HandleUpdateUser)
+	routes.Patch("/user/{id}", app.HandleUpdateUser)
 
 	routes.Group(func(r chi.Router) {
 		r.Get("/packageplans", app.HandleGetAllPackages)
@@ -30,18 +44,18 @@ func (app *Application) routes() *chi.Mux {
 		r.Post("/room", app.HandleCreateRoom)
 		r.Patch("/room/{id}", app.HandlePartialUpdateRoom)
 		r.Delete("/room/{id}", app.HandleDeleteRoom)
-        //manager endpoints
+		// manager endpoints
 		r.Get("/rooms/vaccant", app.HandleGetAllVacantRooms)
-        r.Get("/rooms/male_vaccant", app.HandleGetMaleVacantRooms)
-        r.Get("/rooms/female_vaccant", app.HandleGetFemaleVacantRooms)
-        r.Get("/room/{id}/tenants", app.HandleGetRoomTenants)
+		r.Get("/rooms/male_vaccant", app.HandleGetMaleVacantRooms)
+		r.Get("/rooms/female_vaccant", app.HandleGetFemaleVacantRooms)
+		r.Get("/room/{id}/tenants", app.HandleGetRoomTenants)
 	})
 
 	admin := chi.NewRouter()
 	routes.Mount("/admin", admin)
 	admin.Group(func(r chi.Router) {
 		r.Get("/healthcheck", app.healthcheck)
-        r.Delete("/user/{id}", app.HandleDeleteUser)
+		r.Delete("/user/{id}", app.HandleDeleteUser)
 		r.Route("/role", func(r chi.Router) {
 			r.Post("/", app.HandleCreateRole)
 			r.Get("/", app.HandleGetAllRole)
@@ -49,10 +63,10 @@ func (app *Application) routes() *chi.Mux {
 			r.Delete("/{id}", app.HandleDeleteRole)
 		})
 
-        r.Route("/manager", func(r chi.Router) {
-            r.Post("/", app.HandleCreateManager)
-            r.Get("/", app.HandleGetAllManagers)
-        })
+		r.Route("/manager", func(r chi.Router) {
+			r.Post("/", app.HandleCreateManager)
+			r.Get("/", app.HandleGetAllManagers)
+		})
 	})
 
 	manager := chi.NewRouter()
@@ -67,10 +81,10 @@ func (app *Application) routes() *chi.Mux {
 		})
 	})
 
-    tenant := chi.NewRouter()
-    routes.Mount("/tenant", tenant)
-    tenant.Group(func(r chi.Router) {
-        r.Get("/me", app.HandleGetProfileInfo)
-    })
+	tenant := chi.NewRouter()
+	routes.Mount("/tenant", tenant)
+	tenant.Group(func(r chi.Router) {
+		r.Get("/me", app.HandleGetProfileInfo)
+	})
 	return r
 }

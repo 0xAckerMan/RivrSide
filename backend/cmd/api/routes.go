@@ -13,6 +13,9 @@ func (app *Application) routes() *chi.Mux {
 	routes.Get("/healthcheck", app.healthcheck)
     routes.Post("/login", app.UserLogin)
     routes.Post("/signout", app.SignOut)
+
+    routes.Patch("/user/{id}", app.HandleUpdateUser)
+
 	routes.Group(func(r chi.Router) {
 		r.Get("/packageplans", app.HandleGetAllPackages)
 		r.Post("/packageplan", app.HandleCreatePackagePlan)
@@ -31,18 +34,25 @@ func (app *Application) routes() *chi.Mux {
 		r.Get("/rooms/vaccant", app.HandleGetAllVacantRooms)
         r.Get("/rooms/male_vaccant", app.HandleGetMaleVacantRooms)
         r.Get("/rooms/female_vaccant", app.HandleGetFemaleVacantRooms)
+        r.Get("/room/{id}/tenants", app.HandleGetRoomTenants)
 	})
 
 	admin := chi.NewRouter()
 	routes.Mount("/admin", admin)
 	admin.Group(func(r chi.Router) {
 		r.Get("/healthcheck", app.healthcheck)
+        r.Delete("/user/{id}", app.HandleDeleteUser)
 		r.Route("/role", func(r chi.Router) {
 			r.Post("/", app.HandleCreateRole)
 			r.Get("/", app.HandleGetAllRole)
 			r.Patch("/{id}", app.HandleUpdateRole)
 			r.Delete("/{id}", app.HandleDeleteRole)
 		})
+
+        r.Route("/manager", func(r chi.Router) {
+            r.Post("/", app.HandleCreateManager)
+            r.Get("/", app.HandleGetAllManagers)
+        })
 	})
 
 	manager := chi.NewRouter()
@@ -56,5 +66,11 @@ func (app *Application) routes() *chi.Mux {
 			r.Get("/{id}", app.HandleGetTenantInfo)
 		})
 	})
+
+    tenant := chi.NewRouter()
+    routes.Mount("/tenant", tenant)
+    tenant.Group(func(r chi.Router) {
+        r.Get("/me", app.HandleGetProfileInfo)
+    })
 	return r
 }

@@ -226,7 +226,7 @@ func (app *Application) HandleGetAllVacantRooms(w http.ResponseWriter, r *http.R
         Select("rooms.*, (rooms.capacity - COUNT(users.id)) AS vacancies").
         Joins("LEFT JOIN users ON rooms.id = users.room_id").
         Group("rooms.id").
-        Having("(rooms.capacity - COUNT(users.id)) > 0"). // Filter out rooms with no vacancies
+        Having("(rooms.capacity - COUNT(users.id)) > 0").
         Find(&vacantRoomInfos)
     if result.Error != nil {
         app.serverErrorResponse(w, r, result.Error)
@@ -252,9 +252,9 @@ func (app *Application) HandleGetMaleVacantRooms(w http.ResponseWriter, r *http.
         Table("rooms").
         Select("rooms.*, (rooms.capacity - COUNT(users.id)) AS vacancies").
         Joins("LEFT JOIN users ON rooms.id = users.room_id").
-        Where("users.gender = ?", "male"). // Filter by male occupants
+        Where("users.gender = ?", "male").
         Group("rooms.id").
-        Having("(rooms.capacity - COUNT(users.id)) > 0"). // Filter out rooms with no vacancies
+        Having("(rooms.capacity - COUNT(users.id)) > 0").
         Find(&vacantRoomInfos)
     if result.Error != nil {
         app.serverErrorResponse(w, r, result.Error)
@@ -280,9 +280,9 @@ func (app *Application) HandleGetFemaleVacantRooms(w http.ResponseWriter, r *htt
         Table("rooms").
         Select("rooms.*, (rooms.capacity - COUNT(users.id)) AS vacancies").
         Joins("LEFT JOIN users ON rooms.id = users.room_id").
-        Where("users.gender = ?", "female"). // Filter by female occupants
+        Where("users.gender = ?", "female").
         Group("rooms.id").
-        Having("(rooms.capacity - COUNT(users.id)) > 0"). // Filter out rooms with no vacancies
+        Having("(rooms.capacity - COUNT(users.id)) > 0").
         Find(&vacantRoomInfos)
     if result.Error != nil {
         app.serverErrorResponse(w, r, result.Error)
@@ -306,9 +306,88 @@ func (app *Application) HandleTransferTenant(w http.ResponseWriter, r *http.Requ
 }
 
 func (app *Application) HandleUpdateRoomStatus(w http.ResponseWriter, r *http.Request) {
-	return
+    id, err := app.readIDparam(w,r)
+    if err != nil{
+        app.serverErrorResponse(w,r,err)
+        return
+    }
+    var input struct{
+        Status *string `json:"room_status"`
+    }
+	
+    err = app.readJSON(w,r,&input)
+    if err != nil{
+        app.serverErrorResponse(w,r,err)
+        return
+    }
+
+    var room data.Room
+
+    res := app.DB.First(&room, id)
+    if res.RowsAffected == 0{
+        app.noRecordFoundResponse(w,r)
+        return
+    }
+
+    if res.Error != nil{
+        app.serverErrorResponse(w,r,res.Error)
+        return
+    }
+
+    if input.Status != nil{
+        room.Status = *input.Status
+    }
+
+    result := app.DB.Save(&room)
+    if result.Error != nil{
+        app.serverErrorResponse(w,r,result.Error)
+        return
+    }
+
+    err = app.writeJSON(w,http.StatusOK,envelope{"room": room}, nil)
+    if err != nil{
+        app.serverErrorResponse(w,r,result.Error)
+        return
+    }
+    
 }
 
 func (app *Application) HandleGetRoomTenants(w http.ResponseWriter, r *http.Request) {
-	return
+    id, err := app.readIDparam(w,r)
+    if err != nil{
+        app.serverErrorResponse(w,r,err)
+        return
+    }
+
+    var room data.Room
+    res:= app.DB.First(&room, id)
+    if res.RowsAffected == 0{
+        message:= "Ooops that room doesnt exist"
+        app.errorResponse(w,r,http.StatusNotFound,envelope{"error":message})
+        return
+    }
+
+    if res.Error != nil{
+        app.serverErrorResponse(w,r,res.Error)
+        return
+    }
+
+    var tenants []data.User
+
+    results := app.DB.Preload("Role").Preload("Room").Where(data.User{RoomID: int64(room.ID)}).Find(&tenants)
+    if results.RowsAffected == 0 {
+        app.noRecordFoundResponse(w,r)
+        return
+    }
+
+    if results.Error != nil{
+        app.serverErrorResponse(w,r,results.Error)
+        return
+    }
+
+    err = app.writeJSON(w,http.StatusOK,envelope{"tenants": tenants}, nil)
+    if err != nil{
+        app.serverErrorResponse(w,r,err)
+        return
+    }
 }

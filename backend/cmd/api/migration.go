@@ -9,5 +9,6 @@ func (app *Application) migrations() {
 		&data.Payment{},
 		&data.PackagePlan{},
 		&data.User{},
+        &data.Subscription{},
 	)
 }

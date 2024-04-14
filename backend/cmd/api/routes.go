@@ -1,6 +1,9 @@
 package main
 
 import (
+	"expvar"
+	"net/http"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
@@ -22,6 +25,9 @@ func (app *Application) routes() *chi.Mux {
 	r.MethodNotAllowed(app.methodNotAllowedResponse)
 
 	r.Get("/", app.ApiHome)
+	r.Get("/debug/vars", func(w http.ResponseWriter, r *http.Request) {
+		expvar.Handler().ServeHTTP(w, r)
+	})
 	routes := chi.NewRouter()
 	r.Mount("/api/v1", routes)
 	routes.Get("/healthcheck", app.healthcheck)
@@ -84,7 +90,9 @@ func (app *Application) routes() *chi.Mux {
 	tenant := chi.NewRouter()
 	routes.Mount("/tenant", tenant)
 	tenant.Group(func(r chi.Router) {
+		r.Use(app.UserMiddleware)
 		r.Get("/me", app.HandleGetProfileInfo)
+		r.Patch("/me/update", app.HandleUpdateTenantInfo)
 	})
 	return r
 }

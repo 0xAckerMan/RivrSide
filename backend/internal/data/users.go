@@ -34,6 +34,17 @@ type CreateTenant struct {
 	RoomID      int64  `json:"room"`
 }
 
+type UpdateTenant struct {
+	First_name  *string `json:"first_name"`
+	Last_name   *string `json:"last_name"`
+	Email       *string `json:"email"`
+	PhoneNumber *string `json:"phone_number"`
+	Password    *string `json:"password"`
+	Gender      *string `json:"gender"`
+	RoleID      *int64  `json:"role"`
+	RoomID      *int64  `json:"room"`
+}
+
 type TenantInfo struct {
 	User
 	PackageID     int64        `json:"-"`

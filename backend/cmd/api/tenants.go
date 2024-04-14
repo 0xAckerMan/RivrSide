@@ -8,7 +8,7 @@ import (
 )
 
 func (app *Application) HandleUpdateTenantInfo(w http.ResponseWriter, r *http.Request) {
-	currentTenant := r.Context().Value("tenant").(data.User)
+	currentTenant := r.Context().Value("user").(data.User)
 
 	var input struct {
 		First_name   *string `json:"first_name"`

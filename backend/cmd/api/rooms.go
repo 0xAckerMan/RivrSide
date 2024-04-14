@@ -52,9 +52,22 @@ func (app *Application) HandleGetSingleRoom(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	var room *data.Room
+	type Room struct {
+		data.Room
+		Vacancies int `json:"vacancies"`
+	}
 
-	result := app.DB.First(&room, id)
+	var room Room
+
+	result := app.DB.Table("rooms").
+		Select("rooms.*, rooms.capacity - COUNT(users.id) AS vacancies").
+		Joins("LEFT JOIN users ON rooms.id = users.room_id").
+		Where("rooms.id = ?", id).
+		Where("rooms.deleted_at IS NULL").
+		Group("rooms.id").Having("(rooms.capacity - COUNT(users.id)) >= 0").
+		Order("rooms.id").
+		First(&room)
+
 	if result.RowsAffected == 0 {
 		app.noRecordFoundResponse(w, r)
 		return
@@ -73,30 +86,29 @@ func (app *Application) HandleGetSingleRoom(w http.ResponseWriter, r *http.Reque
 }
 
 func (app *Application) HandleGetAllRooms(w http.ResponseWriter, r *http.Request) {
-    type RoomInfo struct {
-        data.Room
-        Vacancies int `json:"vacancies"`
-    }
+	type RoomInfo struct {
+		data.Room
+		Vacancies int `json:"vacancies"`
+	}
 
-    // Query rooms and calculate vacancies per room
-    var RoomInfos []RoomInfo
-    result := app.DB.
-        Table("rooms").
-        Select("rooms.*, (rooms.capacity - COUNT(users.id)) AS vacancies").
-        Joins("LEFT JOIN users ON rooms.id = users.room_id").
-        Group("rooms.id").
-        Find(&RoomInfos)
-    if result.Error != nil {
-        app.serverErrorResponse(w, r, result.Error)
-        return
-    }
+	// Query rooms and calculate vacancies per room
+	var RoomInfos []RoomInfo
+	result := app.DB.
+		Table("rooms").
+		Select("rooms.*, (rooms.capacity - COUNT(users.id)) AS vacancies").
+		Joins("LEFT JOIN users ON rooms.id = users.room_id").
+		Group("rooms.id").
+		Find(&RoomInfos)
+	if result.Error != nil {
+		app.serverErrorResponse(w, r, result.Error)
+		return
+	}
 
-    err := app.writeJSON(w, http.StatusOK, envelope{"rooms": RoomInfos}, nil)
-    if err != nil {
-        app.serverErrorResponse(w, r, err)
-        return
-    }
-
+	err := app.writeJSON(w, http.StatusOK, envelope{"rooms": RoomInfos}, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
 }
 
 func (app *Application) HandlePartialUpdateRoom(w http.ResponseWriter, r *http.Request) {
@@ -143,11 +155,11 @@ func (app *Application) HandlePartialUpdateRoom(w http.ResponseWriter, r *http.R
 		room.Status = *input.Status
 	}
 
-    err = app.DB.Save(&room).Error
-    if err != nil{
-        app.serverErrorResponse(w,r,err)
-        return
-    }
+	err = app.DB.Save(&room).Error
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
 
 	err = app.writeJSON(w, http.StatusOK, envelope{"room": room}, nil)
 	if err != nil {
@@ -182,4 +194,3 @@ func (app *Application) HandleDeleteRoom(w http.ResponseWriter, r *http.Request)
 		return
 	}
 }
-

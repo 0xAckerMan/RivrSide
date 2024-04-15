@@ -1,10 +1,12 @@
 package main
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/0xAckerMan/internal/data"
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 func (app *Application) HandleUpdateTenantInfo(w http.ResponseWriter, r *http.Request) {
@@ -18,6 +20,7 @@ func (app *Application) HandleUpdateTenantInfo(w http.ResponseWriter, r *http.Re
 		Password     *string `json:"password"`
 		Organisation *string `json:"organisation"`
 		Position     *string `json:"position"`
+		Subcription  *int    `json:"subscription"`
 	}
 
 	err := app.readJSON(w, r, &input)
@@ -71,6 +74,40 @@ func (app *Application) HandleUpdateTenantInfo(w http.ResponseWriter, r *http.Re
 		currentTenant.Password = string(hash)
 	}
 
+	if input.Subcription != nil {
+		var subscription data.Subscription
+		if err := app.DB.Unscoped().First(&subscription, "user_id = ?", currentTenant.ID).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				subscription = data.Subscription{
+					UserID:    int(currentTenant.ID),
+					PackageID: *input.Subcription,
+				}
+
+				if err = app.DB.Create(&subscription).Error; err != nil {
+					app.serverErrorResponse(w, r, err)
+					return
+				}
+			} else {
+				app.serverErrorResponse(w, r, err)
+				return
+			}
+		} else {
+
+			subscription.PackageID = *input.Subcription
+			if err = app.DB.Save(&subscription).Error; err != nil {
+				app.serverErrorResponse(w, r, err)
+				return
+			}
+
+			if subscription.DeletedAt.Valid {
+				if err = app.DB.Unscoped().Model(&subscription).Update("deleted_at", nil).Error; err != nil {
+					app.serverErrorResponse(w, r, err)
+					return
+				}
+			}
+		}
+	}
+
 	res = app.DB.Save(&currentTenant)
 	if res.RowsAffected == 0 {
 		app.noRecordFoundResponse(w, r)
@@ -83,6 +120,11 @@ func (app *Application) HandleUpdateTenantInfo(w http.ResponseWriter, r *http.Re
 	}
 
 	// recheck
+
+    if err = app.DB.Model(&currentTenant).Preload("Room").Preload("Role").First(&currentTenant).Error; err != nil{
+        app.serverErrorResponse(w,r,err)
+        return
+    }
 
 	err = app.writeJSON(w, http.StatusOK, envelope{"tenant": currentTenant}, nil)
 	if err != nil {

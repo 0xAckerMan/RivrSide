@@ -471,3 +471,55 @@ func (app *Application) HandleUpdateTenantInfoByManager(w http.ResponseWriter, r
         return
     }
 }
+
+func (app *Application) HandleGetAllSubscription (w http.ResponseWriter, r *http.Request){
+    var subz []data.Subscription
+
+    result := app.DB.Find(&subz)
+    if result.RowsAffected == 0{
+        app.noRecordFoundResponse(w,r)
+        return
+    }
+
+    if result.Error!=nil{
+        app.serverErrorResponse(w,r,result.Error)
+        return
+    }
+
+    res:= app.DB.Model(&subz).Preload("User").Preload("PackagePlan").Find(&subz)
+    if res.Error != nil{
+        app.serverErrorResponse(w,r,res.Error)
+        return
+    }
+
+    err := app.writeJSON(w,http.StatusOK,envelope{"subscriptions":subz},nil)
+    if err != nil{
+        app.serverErrorResponse(w,r,err)
+        return
+    }
+}
+
+func (app *Application) HandleDeleteSubscriptionRecord (w http.ResponseWriter, r *http.Request){
+    id, err := app.readIDparam(w,r)
+    if err != nil{
+        app.notFoundResponse(w,r)
+        return
+    }
+
+    var subz data.Subscription
+    response := app.DB.Delete(&subz, id)
+    if response.RowsAffected == 0{
+        app.noRecordFoundResponse(w,r)
+        return
+    }
+    if response.Error != nil{
+        app.serverErrorResponse(w,r,response.Error)
+        return
+    }
+
+    err = app.writeJSON(w,http.StatusOK,envelope{"response": "Tenant subscription record deleted successfully"}, nil)
+    if err != nil{
+        app.serverErrorResponse(w,r,err)
+        return
+    }
+}

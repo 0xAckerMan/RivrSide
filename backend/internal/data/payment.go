@@ -11,5 +11,9 @@ type Payment struct {
 	SubscriptionID int           `json:"-"`
 	Subscription   *Subscription `json:"package_plan"  gorm:"foreignKey:SubscriptionID;constraint:OnDelete:CASCADE"`
 	Month          time.Month    `json:"month"`
-	Year           time.Time     `json:"year"`
+	Year           int     `json:"year"`
+}
+
+type MakePayment struct {
+	Amount int `json:"amount"`
 }

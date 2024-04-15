@@ -84,6 +84,8 @@ func (app *Application) routes() *chi.Mux {
 			r.Get("/", app.HandleGetAllTenants)
 			r.Get("/active", app.HandleGetAllActiveTenants)
 			r.Get("/{id}", app.HandleGetTenantInfo)
+            r.Get("/subscriptions", app.HandleGetAllSubscription)
+            r.Delete("/subscriptions/{id}", app.HandleDeleteSubscriptionRecord)
 		})
 	})
 
@@ -93,6 +95,7 @@ func (app *Application) routes() *chi.Mux {
 		r.Use(app.UserMiddleware)
 		r.Get("/me", app.HandleGetProfileInfo)
 		r.Patch("/me/update", app.HandleUpdateTenantInfo)
+        r.Post("/pay", app.HandleMakePayment)
 	})
 	return r
 }

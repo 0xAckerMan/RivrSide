@@ -2,7 +2,9 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/0xAckerMan/internal/data"
 	"golang.org/x/crypto/bcrypt"
@@ -164,3 +166,87 @@ func (app *Application) HandleGetMySubscription(w http.ResponseWriter, r *http.R
 func (app *Application) HandleRequestTransfer(w http.ResponseWriter, r http.Request) {
 	return
 }
+
+func (app *Application) HandleMakePayment(w http.ResponseWriter, r *http.Request){
+    fmt.Println("Entered the handler")
+    currentTenant := r.Context().Value("user").(data.User)
+    fmt.Println("the current user is", currentTenant)
+    var input data.MakePayment
+    var subscription data.Subscription
+
+    err := app.readJSON(w,r,&input)
+    if err != nil{
+        app.serverErrorResponse(w,r,err)
+        return
+    }
+
+    // res := app.DB.Where("user_id = ?", currentTenant.ID).First(&subscription)
+    res := app.DB.Preload("User").Preload("PackagePlan").Where("user_id = ? AND deleted_at IS NULL", currentTenant.ID).
+    Order("id").Limit(1).First(&subscription)
+    if res.Error == gorm.ErrRecordNotFound {
+        message := "You do not have a package, please select before making payments"
+        app.errorResponse(w,r,http.StatusOK,envelope{"response": message})
+        return
+    } 
+
+    if res.Error != nil{
+        app.serverErrorResponse(w,r,res.Error)
+        return
+    }
+
+    fmt.Println("Retrieveeed subz", subscription)
+
+    var payment data.Payment
+    
+    payment = data.Payment{
+        UserID: int64(currentTenant.ID),
+        Amount: input.Amount,
+        SubscriptionID: int(subscription.ID),
+        Month: time.Now().Month(),
+        Year: time.Now().Year(),
+        Subscription: &subscription,
+    }
+
+
+    payment.Balance = subscription.PackagePlan.Price - input.Amount
+    if input.Amount > payment.Subscription.PackagePlan.Price || payment.Balance < 0{
+        nextMonth := data.Payment{
+            UserID: int64(currentTenant.ID),
+            Amount: payment.Amount,
+            SubscriptionID: payment.SubscriptionID,
+            Month: time.Now().AddDate(0,1,0).Month(),
+        }
+        if payment.Year == int(time.December) {
+            nextMonth.Year = time.Now().AddDate(1,0,0).Year()
+        } else {
+            nextMonth.Year = time.Now().Year()
+        }
+
+        if err = app.DB.Create(&nextMonth).Error; err != nil{
+            app.serverErrorResponse(w,r,err)
+            return
+        }
+    }
+
+    fmt.Println("PAYYYY ME INIT", payment)
+
+    if err = app.DB.Create(&payment).Error; err != nil{
+        app.serverErrorResponse(w,r,err)
+        return
+    }
+
+    res = app.DB.Model(&payment).Preload("User").Preload("Subscription").First(&payment) 
+    if res.Error != nil{
+        app.serverErrorResponse(w,r,res.Error)
+        return
+    }
+
+    err = app.writeJSON(w,http.StatusCreated,envelope{"payment": payment},nil)
+    if err != nil{
+        app.serverErrorResponse(w,r,err)
+        return
+    }
+    
+
+}
+

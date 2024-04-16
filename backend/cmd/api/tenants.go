@@ -127,16 +127,15 @@ func (app *Application) HandleUpdateTenantInfo(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-    if err = app.DB.Model(&subscription).Preload("PackagePlan").First(&subscription).Error; err != nil{
-        app.serverErrorResponse(w,r,err)
-        return
-    }
-    
-    var updatedUser = data.TenantInfo{
-        User: currentTenant,
-        PackageID: int64(subscription.PackageID),
-    }
+	if err = app.DB.Model(&subscription).Preload("PackagePlan").First(&subscription).Error; err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
 
+	updatedUser := data.TenantInfo{
+		User:      currentTenant,
+		PackageID: int64(subscription.PackageID),
+	}
 
 	err = app.writeJSON(w, http.StatusOK, envelope{"tenant": updatedUser}, nil)
 	if err != nil {
@@ -213,27 +212,28 @@ func (app *Application) HandleMakePayment(w http.ResponseWriter, r *http.Request
 		Subscription:   &subscription,
 	}
 
-    var totalPaid sql.NullFloat64
+	var totalPaid sql.NullFloat64
 
-    result:= app.DB.Model(&data.Payment{}).
-        Where("user_id = ? AND month = ? AND year = ?", currentTenant.ID, time.Now().Month(), time.Now().Year()).
+    result := app.DB.Model(&data.Payment{}).
+        Where("user_id = ? AND ((month = ? AND year = ?) OR (year = ? AND month < ?))",
+            currentTenant.ID, time.Now().Month(), time.Now().Year(), time.Now().Year(), time.Now().Month()).
         Pluck("SUM(amount)", &totalPaid)
 
-    if result.Error != nil{
-        app.serverErrorResponse(w,r,result.Error)
-        return
-    }
-    var totalPaidAmount float64
-    if totalPaid.Valid {
-        totalPaidAmount = totalPaid.Float64
-    }
-    totalPaidAmount += float64(input.Amount)
+	if result.Error != nil {
+		app.serverErrorResponse(w, r, result.Error)
+		return
+	}
+	var totalPaidAmount float64
+	if totalPaid.Valid {
+		totalPaidAmount = totalPaid.Float64
+	}
+	totalPaidAmount += float64(input.Amount)
 
 	payment.Balance = subscription.PackagePlan.Price - int(totalPaidAmount)
 	if int(totalPaidAmount) > payment.Subscription.PackagePlan.Price || payment.Balance < 0 {
 		nextMonth := data.Payment{
 			UserID:         int64(currentTenant.ID),
-			Amount:         payment.Amount,
+			Amount:         -payment.Amount,
 			SubscriptionID: payment.SubscriptionID,
 			Month:          time.Now().AddDate(0, 1, 0).Month(),
 		}

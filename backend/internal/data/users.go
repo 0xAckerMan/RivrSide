@@ -47,7 +47,7 @@ type UpdateTenant struct {
 
 type TenantInfo struct {
 	User
-	PackageID     int64        `json:"-"`
+	PackageID     int64        `json:"package_id"`
 	PackagePlan   *PackagePlan `json:"package_plan"`
 	Month         time.Month   `json:"current_month"`
 	Paymentstatus string       `json:"payment_status"`

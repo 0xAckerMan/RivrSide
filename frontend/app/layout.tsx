@@ -4,6 +4,7 @@ import "./globals.css";
 import NavBar from "@/components/Header";
 import Footer from "@/components/footer";
 import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster} from "sonner";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -26,11 +27,13 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
+          <Toaster position="top-right" richColors />
           <NavBar />
           {children}
           <Footer />
         </ThemeProvider>
       </body>
+
     </html>
   );
 }

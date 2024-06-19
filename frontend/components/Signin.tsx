@@ -1,10 +1,10 @@
 "use client";
 import { FormEventHandler, useState, useEffect } from "react";
+import { toast } from "sonner";
 
 const SignInForm = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   // Function to handle form submission
@@ -12,36 +12,30 @@ const SignInForm = () => {
     e.preventDefault();
 
     try {
-      setError("");
       setLoading(true);
       await signIn(email, password);
+      toast.success("Successfully signed in!");
     } catch {
-      setError("Wrong email or password");
-      // Set timeout to clear error after 15 seconds
-      setTimeout(() => setError(""), 5000); // 15 seconds
+      toast.error("Wrong email or password");
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
-  // Cleanup function to clear timeout on unmount or re-render
-  useEffect(() => {
-    return () => clearTimeout();
-  }, []);
-
   return (
-    <div className="flex flex-col items-center h-3/4 justify-center">
-      <div className="w-96 space-y-3">
+    <div className="flex flex-col items-center h-[82vh]">
+      <div className="md:m-auto md:w-96 space-y-9 w-auto m-auto">
         <div className="flex flex-col items-center">
           <h1 className="font-medium text-3xl">Welcome Back</h1>
           <p>Enter your details</p>
         </div>
-        <div
+
+        {/* <div
           className="mx-2 flex flex-col items-center"
           style={{ minHeight: "24px" }}
         >
           {error && <p className="text-red-500">{error}</p>}
-        </div>
+        </div> */}
         <form onSubmit={handleSubmit} className="flex flex-col">
           <label className="font-medium mx-2">Email Address</label>
           <input
@@ -49,7 +43,7 @@ const SignInForm = () => {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Enter your email"
-            className="border-2 border-gray-200 p-2 m-2 rounded-md active:outline-none focus:outline-none focus:border-blue-500"
+            className="border-2 p-2 m-2 rounded-md active:outline-none focus:outline-none border-blue-300 focus:border-blue-500 hover:border-blue-500"
           />
 
           <label className="font-medium mx-2">Password</label>
@@ -58,7 +52,7 @@ const SignInForm = () => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Password"
-            className="border-2 border-gray-200 p-2 m-2 rounded-md active:outline-none focus:outline-none focus:border-blue-500"
+            className="border-2 p-2 m-2 rounded-md active:outline-none focus:outline-none border-blue-300 focus:border-blue-500 hover:border-blue-500"
           />
           <button
             disabled={loading}
@@ -67,7 +61,6 @@ const SignInForm = () => {
           >
             LogIn
           </button>
-
         </form>
       </div>
     </div>

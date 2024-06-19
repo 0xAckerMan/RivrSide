@@ -4,7 +4,7 @@ import Image from 'next/image';
 import { useState } from 'react';
 
 const NavBar = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(true); // Replace this with your actual login check
+  const [isLoggedIn, setIsLoggedIn] = useState(false); // Replace this with your actual login check
 
   return (
     <nav className="flex justify-between items-center p-4 bg-gray-700 text-white">

@@ -47,10 +47,10 @@ func (app *Application) HandleMakePayment(w http.ResponseWriter, r *http.Request
 
 	var totalPaid sql.NullFloat64
 
-    result := app.DB.Model(&data.Payment{}).
-        Where("user_id = ? AND ((month = ? AND year = ?) OR (year = ? AND month < ?))",
-            currentTenant.ID, time.Now().Month(), time.Now().Year(), time.Now().Year(), time.Now().Month()).
-        Pluck("SUM(amount)", &totalPaid)
+	result := app.DB.Model(&data.Payment{}).
+		Where("user_id = ? AND ((month = ? AND year = ?) OR (year = ? AND month < ?))",
+			currentTenant.ID, time.Now().Month(), time.Now().Year(), time.Now().Year(), time.Now().Month()).
+		Pluck("SUM(amount)", &totalPaid)
 
 	if result.Error != nil {
 		app.serverErrorResponse(w, r, result.Error)
@@ -100,47 +100,47 @@ func (app *Application) HandleMakePayment(w http.ResponseWriter, r *http.Request
 	}
 }
 
-func (app *Application) HandleGetAllPayment  (w http.ResponseWriter, r *http.Request){
-    var payment []data.Payment
+func (app *Application) HandleGetAllPayment(w http.ResponseWriter, r *http.Request) {
+	var payment []data.Payment
 
-    result := app.DB.Preload("User").Preload("Subscription").Find(&payment)
-    if result.RowsAffected ==0{
-        app.noRecordFoundResponse(w,r)
-        return
-    }
+	result := app.DB.Preload("User").Preload("Subscription").Find(&payment)
+	if result.RowsAffected == 0 {
+		app.noRecordFoundResponse(w, r)
+		return
+	}
 
-    if result.Error != nil{
-        app.serverErrorResponse(w,r,result.Error)
-        return
-    }
+	if result.Error != nil {
+		app.serverErrorResponse(w, r, result.Error)
+		return
+	}
 
-    err := app.writeJSON(w,http.StatusOK,envelope{"all_payments": payment}, nil)
-    if err != nil{
-        app.serverErrorResponse(w,r,err)
-        return
-    }
+	err := app.writeJSON(w, http.StatusOK, envelope{"all_payments": payment}, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
 }
 
-func (app *Application) HandleGetAllPaymentPerMonth (w http.ResponseWriter, r *http.Request){
-    return
+func (app *Application) HandleGetAllPaymentPerMonth(w http.ResponseWriter, r *http.Request) {
+	return
 }
 
-func (app *Application) HandleGetCurrentMonthPayment (w http.ResponseWriter, r *http.Request){
-    return
+func (app *Application) HandleGetCurrentMonthPayment(w http.ResponseWriter, r *http.Request) {
+	return
 }
 
-func (app *Application) HandleAllCurrentMonthMealandRoom (w http.ResponseWriter, r *http.Request){
-    return
+func (app *Application) HandleAllCurrentMonthMealandRoom(w http.ResponseWriter, r *http.Request) {
+	return
 }
 
-func (app *Application) HandleAllCurrentMonthRoomOnly (w http.ResponseWriter, r *http.Request){
-    return
+func (app *Application) HandleAllCurrentMonthRoomOnly(w http.ResponseWriter, r *http.Request) {
+	return
 }
 
-func (app *Application) HandleGetSingleUserPaymentHistory (w http.ResponseWriter, r *http.Request){
-    return
+func (app *Application) HandleGetSingleUserPaymentHistory(w http.ResponseWriter, r *http.Request) {
+	return
 }
 
-func (app *Application) HandleUserBalance (w http.ResponseWriter, r *http.Request){
-    return
+func (app *Application) HandleUserBalance(w http.ResponseWriter, r *http.Request) {
+	return
 }

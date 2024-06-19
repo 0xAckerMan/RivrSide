@@ -1,11 +1,15 @@
 "use client";
 import SignInForm from "@/components/Signin";
+import { ModeToggle } from "@/components/darktoggle";
 
 const SignInPage = () => {
   return (
-  
-        <SignInForm />
-   
+    <>
+    <div className="flex flex-row-reverse pr-3">
+      <ModeToggle/>
+</div>
+      <SignInForm />
+    </>
   );
 }
 

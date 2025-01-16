@@ -14,41 +14,41 @@ import (
 
 type envelope map[string]interface{}
 
-func (app *Application) readIDparam(w http.ResponseWriter, r *http.Request) (int64, error){
-    id := chi.URLParam(r, "id")
-    idInt,err := strconv.ParseInt(id,10,64)
-    if err != nil || idInt < 1{
-        app.notFoundResponse(w,r)
-        return 0, errors.New("invalid id parameter")
-    }
-    return idInt, nil
+func (app *Application) readIDparam(w http.ResponseWriter, r *http.Request) (int64, error) {
+	id := chi.URLParam(r, "id")
+	idInt, err := strconv.ParseInt(id, 10, 64)
+	if err != nil || idInt < 1 {
+		app.notFoundResponse(w, r)
+		return 0, errors.New("invalid id parameter")
+	}
+	return idInt, nil
 }
 
 func (app *Application) writeJSON(w http.ResponseWriter, status int, message envelope, header http.Header) error {
-    js, err := json.Marshal(message)
-    if err != nil{
-        return err
-    }
+	js, err := json.Marshal(message)
+	if err != nil {
+		return err
+	}
 
-    js =append(js, '\n')
+	js = append(js, '\n')
 
-    for key, value := range header{
-        w.Header()[key] = value
-    }
+	for key, value := range header {
+		w.Header()[key] = value
+	}
 
-    w.Header().Set("Content-Type", "application/json")
-    w.WriteHeader(status)
-    w.Write(js)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	w.Write(js)
 
-    return err
+	return err
 }
 
 func (app *Application) readJSON(w http.ResponseWriter, r *http.Request, dst interface{}) error {
-    	maxByte := 1_048_576
-    r.Body = http.MaxBytesReader(w,r.Body, int64(maxByte))
-    dec := json.NewDecoder(r.Body)
-    dec.DisallowUnknownFields()
-    err := dec.Decode(dst)
+	maxByte := 1_048_576
+	r.Body = http.MaxBytesReader(w, r.Body, int64(maxByte))
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	err := dec.Decode(dst)
 	if err != nil {
 		var syntaxError *json.SyntaxError
 		var invalidUnmarshalError *json.InvalidUnmarshalError
@@ -79,10 +79,9 @@ func (app *Application) readJSON(w http.ResponseWriter, r *http.Request, dst int
 			return err
 		}
 	}
-    err = dec.Decode(&struct{}{})
-    if err != io.EOF{
-        return errors.New("body must only contain one json value")
-    }
+	err = dec.Decode(&struct{}{})
+	if err != io.EOF {
+		return errors.New("body must only contain one json value")
+	}
 	return nil
 }
-    
